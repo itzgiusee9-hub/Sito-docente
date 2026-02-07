@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Area Docente - Scuola</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #cbe7ff, #fef6d8);
+      margin: 0;
+      padding: 20px;
+    }
+    .box {
+      max-width: 1000px;
+      margin: auto;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2c7be5; }
+    h2 { color: #f59f00; }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #2c7be5;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .hidden { display: none; }
+    .materiale {
+      border: 2px dashed #ffd43b;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 12px;
+      background: #fffbe6;
+    }
+    iframe, img, video {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box" id="loginBox">
+  <h1>🎒 Accesso Docente</h1>
+  <input type="password" id="password" placeholder="Inserisci password" />
+  <button id="loginBtn">Entra</button>
+  <p id="errore" style="color:red"></p>
+</div>
+
+<div class="box hidden" id="areaDocente">
+  <h1>🏫 Area Riservata Docente</h1>
+
+  <h2>📚 Carica materiale</h2>
+  <input type="text" id="titolo" placeholder="Titolo materiale" />
+
+  <select id="categoria">
+    <option>Matematica</option>
+    <option>Italiano</option>
+    <option>Scienze</option>
+    <option>Storia</option>
+    <option>Arte</option>
+    <option>Altro</option>
+  </select>
+
+  <select id="tipo">
+    <option value="file">File (PDF / Immagini / Video)</option>
+    <option value="youtube">Video YouTube</option>
+  </select>
+
+  <input type="file" id="file" />
+  <input type="text" id="youtube" placeholder="Link YouTube" class="hidden" />
+
+  <button id="salvaBtn">Salva materiale</button>
+
+  <h2>🗂️ Materiale caricato</h2>
+  <div id="lista"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const PASSWORD = "Docente2026!";
+
+  const loginBtn = document.getElementById('loginBtn');
+  const salvaBtn = document.getElementById('salvaBtn');
+  const tipoSelect = document.getElementById('tipo');
+
+  loginBtn.onclick = login;
+  salvaBtn.onclick = salvaMateriale;
+
+  tipoSelect.onchange = () => {
+    document.getElementById('file').classList.toggle('hidden', tipoSelect.value === 'youtube');
+    document.getElementById('youtube').classList.toggle('hidden', tipoSelect.value !== 'youtube');
+  };
+
+  caricaLista();
+
+  function login(){
+    const p = document.getElementById('password').value;
+    if(p === PASSWORD){
+      document.getElementById('loginBox').classList.add('hidden');
+      document.getElementById('areaDocente').classList.remove('hidden');
+    } else {
+      document.getElementById('errore').innerText = "Password errata";
+    }
+  }
+
+  function salvaMateriale(){
+    const titolo = document.getElementById('titolo').value.trim();
+    const categoria = document.getElementById('categoria').value;
+    const tipo = document.getElementById('tipo').value;
+    const fileInput = document.getElementById('file');
+    const yt = document.getElementById('youtube').value.trim();
+
+    if(!titolo || (tipo === 'file' && fileInput.files.length === 0) || (tipo === 'youtube' && !yt)){
+      alert('Compila tutti i campi');
+      return;
+    }
+
+    let materiale = { titolo, categoria, tipo };
+
+    if(tipo === 'file'){
+      const file = fileInput.files[0];
+      materiale.nomeFile = file.name;
+      materiale.mime = file.type || '';
+      materiale.url = URL.createObjectURL(file);
+    } else {
+      materiale.url = yt.replace('watch?v=', 'embed/');
+    }
+
+    const dati = JSON.parse(localStorage.getItem('materiali') || '[]');
+    dati.push(materiale);
+    localStorage.setItem('materiali', JSON.stringify(dati));
+
+    document.getElementById('titolo').value = '';
+    document.getElementById('file').value = '';
+    document.getElementById('youtube').value = '';
+
+    caricaLista();
+  }
+
+  function caricaLista(){
+    const lista = document.getElementById('lista');
+    lista.innerHTML = '';
+    const dati = JSON.parse(localStorage.getItem('materiali') || '[]');
+
+    dati.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'materiale';
+      let contenuto = '';
+
+      if(m.tipo === 'youtube'){
+        contenuto = `<iframe height="315" src="${m.url}" allowfullscreen></iframe>`;
+      } else if(m.mime && m.mime.startsWith('image')){
+        contenuto = `<img src="${m.url}">`;
+      } else if(m.mime === 'application/pdf'){
+        contenuto = `<iframe src="${m.url}" height="400"></iframe>`;
+      } else if(m.mime && m.mime.startsWith('video')){
+        contenuto = `<video src="${m.url}" controls></video>`;
+      } else {
+        contenuto = `<p>📎 ${m.nomeFile}</p>`;
+      }
+
+      div.innerHTML = `<strong>${m.titolo}</strong><br>📘 Categoria: ${m.categoria}<br>${contenuto}`;
+      lista.appendChild(div);
+    });
+  }
+});
+</script>
+
+</body>
+</html>
